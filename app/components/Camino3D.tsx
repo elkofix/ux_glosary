@@ -1,24 +1,156 @@
 // app/components/Camino3D.tsx
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
+import { useEffect, useRef, useState, useMemo, Suspense } from "react";
 import * as THREE from "three";
 
-const TOTAL_PIEDRAS = 30;
-const DISTANCIA = 2;
+// --- DATA: UX Terms ---
+// I added generic definitions. You can edit the 'def' fields with your specific content.
+const UX_TERMS = [
+  { term: "Doble Diamante", def: "Modelo de proceso de diseño con fases de divergencia y convergencia." },
+  { term: "Design Thinking", def: "Metodología centrada en el usuario para resolver problemas complejos." },
+  { term: "Scrum", def: "Marco de trabajo ágil para desarrollar productos complejos." },
+  { term: "Metodologías Ágiles", def: "Conjunto de prácticas para el desarrollo de software iterativo." },
+  { term: "Design Sprint", def: "Proceso de 5 días para validar ideas mediante prototipos." },
+  { term: "Diseño centrado en el usuario", def: "Enfoque que pone las necesidades del usuario al centro del proceso." },
+  { term: "Metodología VS Artefacto", def: "Diferencia entre el proceso (cómo lo hacemos) y el entregable (qué hacemos)." },
+  { term: "MVP", def: "Producto Mínimo Viable: la versión más simple para validar una hipótesis." },
+  { term: "Growth Hacking", def: "Estrategias de crecimiento rápido basadas en datos y experimentación." },
+  { term: "Lean UX", def: "Diseño enfocado en ciclos rápidos de aprendizaje y menos documentación." },
+  { term: "Dual Track", def: "Trabajo paralelo de Discovery (qué construir) y Delivery (construirlo)." },
+  { term: "Prototipo", def: "Representación visual o interactiva de una idea para probarla." },
+  { term: "Pivotar", def: "Cambiar fundamentalmente la dirección del producto basado en aprendizaje." },
+  { term: "Kanban", def: "Sistema visual para gestionar el flujo de trabajo." },
+  { term: "PBI de diseño", def: "Product Backlog Item relacionado con tareas de diseño." },
+  { term: "UAT", def: "User Acceptance Testing: Pruebas finales antes del lanzamiento." },
+  { term: "Sistemas de diseño", def: "Colección de reglas y componentes para mantener consistencia." },
+  { term: "Diseño interfaz", def: "Diseño de la parte visual y funcional con la que interactúa el usuario." },
+  { term: "Cross functional teams", def: "Equipos con miembros de diferentes disciplinas (UX, Dev, QA, etc)." },
+  { term: "B2B / B2C", def: "Business to Business vs Business to Consumer." },
+  { term: "Features", def: "Características o funcionalidades específicas de un producto." },
+  { term: "Wireframe", def: "Esquema de baja fidelidad que muestra la estructura de la interfaz." },
+  { term: "Tribus - Spotify", def: "Modelo de organización ágil escalada famoso por Spotify." },
+  { term: "Calidad UX - ISO", def: "Estándares internacionales de usabilidad y ergonomía." },
+  { term: "Product Designer", def: "Diseñador responsable de la experiencia completa del producto." },
+  { term: "Miro y entiendo", def: "Fase de observación y empatía en el proceso de diseño." },
+];
 
+const DISTANCIA = 2.5; // Slightly more spacing for flowers
+const TOTAL_ITEMS = UX_TERMS.length;
 const MIN_Z = 0;
-const MAX_Z = (TOTAL_PIEDRAS - 1) * DISTANCIA;
+const MAX_Z = (TOTAL_ITEMS - 1) * DISTANCIA;
+const ZIG_ZAG_AMPLITUDE = 3;
 
-function Camino() {
+// Ground tile configuration
+const GROUND_TILE_SIZE = 10; // How many times the tile repeats across the ground
+
+// Stone texture paths
+const STONE_TEXTURES = [
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/stone1.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/stone2.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/stone3.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/stone4.webp`
+];
+
+// --- UTILS ---
+function getZigZagX(index: number): number {
+  return Math.sin(index * 0.5) * ZIG_ZAG_AMPLITUDE;
+}
+
+// Get a random stone texture for each index
+function getRandomStoneTexture(index: number): string {
+  // Use index as seed for consistent but pseudo-random selection
+  const randomIndex = Math.floor(Math.abs(Math.sin(index * 12.9898) * 43758.5453) % STONE_TEXTURES.length);
+  return STONE_TEXTURES[randomIndex];
+}
+
+// --- COMPONENTS ---
+
+function Piedra({ position, index }: { position: [number, number, number], index: number }) {
+  const texturePath = useMemo(() => getRandomStoneTexture(index), [index]);
+  const texture = useLoader(THREE.TextureLoader, texturePath);
+  
+  // Configure texture for proper isometric appearance
+  useMemo(() => {
+    if (texture) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(1, 1);
+      texture.needsUpdate = true;
+    }
+    return texture;
+  }, [texture]);
+
+  return (
+    <mesh position={position} receiveShadow castShadow rotation={[-Math.PI / 2, 0, 0]}>
+      {/* Plane geometry to show the isometric stone image */}
+      <planeGeometry args={[1.8, 1.8]} />
+      <meshStandardMaterial 
+        map={texture} 
+        transparent={true}
+        roughness={0.9}
+      />
+    </mesh>
+  );
+}
+
+function Flower({ 
+  position, 
+  data, 
+  onSelect 
+}: { 
+  position: [number, number, number], 
+  data: { term: string, def: string },
+  onSelect: (data: any) => void
+}) {
+  const [hovered, setHover] = useState(false);
+  
+  // Change cursor on hover
+  useEffect(() => {
+    document.body.style.cursor = hovered ? 'pointer' : 'auto';
+    return () => { document.body.style.cursor = 'auto'; };
+  }, [hovered]);
+
+  return (
+    <group 
+      position={position} 
+      onClick={(e) => { e.stopPropagation(); onSelect(data); }}
+      onPointerOver={() => setHover(true)}
+      onPointerOut={() => setHover(false)}
+    >
+      {/* Stem */}
+      <mesh position={[0, 0.5, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 1]} />
+        <meshStandardMaterial color="green" />
+      </mesh>
+      
+      {/* Flower Head */}
+      <mesh position={[0, 1.1, 0]}>
+        <dodecahedronGeometry args={[0.4, 0]} />
+        <meshStandardMaterial 
+          color={hovered ? "#ff69b4" : "#ff1493"} 
+          emissive={hovered ? "#ff69b4" : "#000000"}
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+
+      {/* Label (Optional: visible when close?) */}
+      {/* You could add Text from @react-three/drei here if needed */}
+    </group>
+  );
+}
+
+function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
   const group = useRef<THREE.Group>(null);
+  const { camera } = useThree();
   const velocity = useRef(0);
   const positionZ = useRef(0);
 
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // Positive adds to Z, moving the world towards the camera
       velocity.current += e.deltaY * 0.01;
     };
 
@@ -30,49 +162,173 @@ function Camino() {
     positionZ.current += velocity.current;
     velocity.current *= 0.85;
 
-    // 🔒 Clamp de límites
+    // Clamp limits
     if (positionZ.current < MIN_Z) {
       positionZ.current = MIN_Z;
-      velocity.current = 0; // cortas la inercia
+      velocity.current = 0;
     }
-
-    if (positionZ.current > MAX_Z) {
-      positionZ.current = MAX_Z;
+    if (positionZ.current > MAX_Z + 10) { // Allow scrolling a bit past the end
+      positionZ.current = MAX_Z + 10;
       velocity.current = 0;
     }
 
     if (group.current) {
       group.current.position.z = positionZ.current;
     }
+
+    // --- Camera Logic ---
+    const currentIndex = positionZ.current / DISTANCIA;
+    const targetX = getZigZagX(currentIndex);
+    
+    // Smooth follow X
+    camera.position.x += (targetX - camera.position.x) * 0.1;
+    camera.position.y = 4;
+    camera.position.z = 6; // Start position (behind the start line)
+
+    // Look ahead
+    const lookAtX = getZigZagX(currentIndex + 3);
+    camera.lookAt(lookAtX, 0, -10); // Look into the distance
   });
 
   return (
     <group ref={group}>
-      {[...Array(TOTAL_PIEDRAS)].map((_, i) => (
-        <mesh key={i} position={[0, -1, -i * DISTANCIA]}>
-          <boxGeometry args={[1.2, 0.25, 1.2]} />
-          <meshStandardMaterial
-            color={
-              i === 0
-                ? "#ff4444"
-                : i === TOTAL_PIEDRAS - 1
-                ? "#44aaff"
-                : "#777"
-            }
-          />
-        </mesh>
-      ))}
+      {UX_TERMS.map((item, i) => {
+        const x = getZigZagX(i);
+        const z = -i * DISTANCIA;
+        
+        // Determine side for the flower (Left or Right)
+        // We push them 3.5 units away from the center of the path at that point
+        const isLeft = i % 2 === 0;
+        const flowerOffset = isLeft ? -3.5 : 3.5;
+        const flowerX = x + flowerOffset;
+
+        return (
+          <group key={i}>
+            {/* The Path Stone */}
+            <Piedra position={[x, 0.01, z]} index={i} />
+            
+            {/* The UX Flower */}
+            <Flower 
+              position={[flowerX, 0, z]} 
+              data={item} 
+              onSelect={onSelectTerm}
+            />
+          </group>
+        );
+      })}
+      
+      {/* Ground moved inside Camino group so it scrolls with everything */}
+      <Ground />
     </group>
   );
 }
 
-export default function Camino3D() {
+function Ground() {
+  const groundTexture = useLoader(THREE.TextureLoader, `${process.env.NEXT_PUBLIC_BASE_PATH}/tile.webp`);
+  
+  // Configure texture for tiling - use useMemo to prevent re-configuration
+  useMemo(() => {
+    if (groundTexture) {
+      groundTexture.wrapS = THREE.RepeatWrapping;
+      groundTexture.wrapT = THREE.RepeatWrapping;
+      groundTexture.repeat.set(GROUND_TILE_SIZE, GROUND_TILE_SIZE * 2); // x2 for the longer dimension
+      groundTexture.needsUpdate = true;
+    }
+    return groundTexture;
+  }, [groundTexture]);
+
   return (
-    <Canvas camera={{ position: [0, 2, 4], fov: 60 }}>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[4, 6, 3]} intensity={1} />
-      <fog attach="fog" args={["#000", 5, 20]} />
-      <Camino />
-    </Canvas>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
+      <planeGeometry args={[100, 200]} />
+      <meshStandardMaterial map={groundTexture} />
+    </mesh>
+  );
+}
+
+// --- MAIN COMPONENT ---
+
+export default function Camino3D() {
+  const [selectedTerm, setSelectedTerm] = useState<{ term: string, def: string } | null>(null);
+
+  return (
+    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+      
+      {/* 3D Scene */}
+      <Canvas
+        shadows
+        camera={{ position: [0, 5, 6], fov: 60 }}
+        style={{ background: "#87CEEB" }}
+        gl={{ preserveDrawingBuffer: true }}
+      >
+        <Suspense fallback={null}>
+          <ambientLight intensity={0.6} />
+          <directionalLight 
+            position={[10, 20, 10]} 
+            intensity={1} 
+            castShadow 
+          />
+          <fog attach="fog" args={["#87CEEB", 5, 30]} />
+
+          <Camino onSelectTerm={setSelectedTerm} />
+        </Suspense>
+      </Canvas>
+
+      {/* UI Overlay for Definitions */}
+      {selectedTerm && (
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          background: "rgba(255, 255, 255, 0.95)",
+          padding: "2rem",
+          borderRadius: "1rem",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+          maxWidth: "400px",
+          width: "90%",
+          textAlign: "center",
+          zIndex: 10,
+          backdropFilter: "blur(5px)"
+        }}>
+          <h2 style={{ color: "#ff1493", margin: "0 0 1rem 0", fontSize: "1.5rem" }}>
+            {selectedTerm.term}
+          </h2>
+          <p style={{ color: "#333", lineHeight: "1.6", fontSize: "1rem" }}>
+            {selectedTerm.def}
+          </p>
+          <button 
+            onClick={() => setSelectedTerm(null)}
+            style={{
+              marginTop: "1.5rem",
+              padding: "0.5rem 1.5rem",
+              background: "#333",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "0.9rem"
+            }}
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Instructions Overlay */}
+      {!selectedTerm && (
+        <div style={{
+          position: "absolute",
+          bottom: "2rem",
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: "white",
+          textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+          pointerEvents: "none",
+          textAlign: "center"
+        }}>
+          <p>Scroll para caminar • Click en las flores para ver definiciones</p>
+        </div>
+      )}
+    </div>
   );
 }

@@ -24,7 +24,6 @@ export default function Home() {
           </h1>
         </div>
 
-        <p className="mt-4 text-xs opacity-70">Scroll para avanzar</p>
       </div>
 
       {/* Escena 3D ocupa toda la pantalla */}
