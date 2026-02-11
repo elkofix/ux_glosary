@@ -53,11 +53,6 @@ jobs:
         with:
           node-version: "20"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
-      - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
-        env:
-          NODE_ENV: production
-          NEXT_PUBLIC_BASE_PATH: /mi-glosario   # 👈 cambia por tu repo
       - name: Restore cache
         uses: actions/cache@v4
         with:
@@ -71,7 +66,10 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_BASE_PATH: /mi-glosario   # cambia por tu repo
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
