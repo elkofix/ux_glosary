@@ -19,7 +19,7 @@ export default function Home() {
             height={200}
             priority
           />
-          <h1 className="absolute inset-0 flex items-center justify-center text-4xl font-bold text-lime-600/50 italic">
+          <h1 className="absolute inset-0 flex items-center justify-center text-4xl font-bold text-emerald-950 italic">
             Glosario UX
           </h1>
         </div>

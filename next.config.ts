@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, 
   },
-  basePath: "/ux_glosary",
-  assetPrefix: "/ux_glosary/",
+ // basePath: `/${process.env.NEXT_PUBLIC_BASE_PATH || ""}`,
+  //assetPrefix: `/${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`,
 };
 export default nextConfig;

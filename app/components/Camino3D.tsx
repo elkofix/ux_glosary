@@ -6,7 +6,6 @@ import { useEffect, useRef, useState, useMemo, Suspense } from "react";
 import * as THREE from "three";
 
 // --- DATA: UX Terms ---
-// I added generic definitions. You can edit the 'def' fields with your specific content.
 const UX_TERMS = [
   { term: "Doble Diamante", def: "Modelo de proceso de diseño con fases de divergencia y convergencia." },
   { term: "Design Thinking", def: "Metodología centrada en el usuario para resolver problemas complejos." },
@@ -34,6 +33,7 @@ const UX_TERMS = [
   { term: "Calidad UX - ISO", def: "Estándares internacionales de usabilidad y ergonomía." },
   { term: "Product Designer", def: "Diseñador responsable de la experiencia completa del producto." },
   { term: "Miro y entiendo", def: "Fase de observación y empatía en el proceso de diseño." },
+
 ];
 
 const DISTANCIA = 2.5; // Slightly more spacing for flowers
@@ -53,6 +53,43 @@ const STONE_TEXTURES = [
   `${process.env.NEXT_PUBLIC_BASE_PATH}/stone4.webp`
 ];
 
+// Flower image paths
+const FLOWER_TEXTURES = [
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/anemone.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/begonia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/calla_lily.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/camellia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/carnation.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/cherry_blossom.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/chrysanthemum.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/daffodil.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/dahlia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/daisy.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/fleur-de-lis.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/freesia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/gardenia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/geranium.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/hydrangea.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/iris.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/jasmine.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/lavender.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/lily.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/lotus.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/magnolia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/mallow.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/marigold.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/orchid.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/pansy.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/peony.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/petunia.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/poppy.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/rose.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/sunflower.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/tulip.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/violet.webp`,
+  `${process.env.NEXT_PUBLIC_BASE_PATH}/wallflower.webp`
+];
+
 // --- UTILS ---
 function getZigZagX(index: number): number {
   return Math.sin(index * 0.5) * ZIG_ZAG_AMPLITUDE;
@@ -60,9 +97,14 @@ function getZigZagX(index: number): number {
 
 // Get a random stone texture for each index
 function getRandomStoneTexture(index: number): string {
-  // Use index as seed for consistent but pseudo-random selection
   const randomIndex = Math.floor(Math.abs(Math.sin(index * 12.9898) * 43758.5453) % STONE_TEXTURES.length);
   return STONE_TEXTURES[randomIndex];
+}
+
+// Get flower texture in a circular repeating manner
+function getFlowerTexturePath(index: number): string {
+  const flowerIndex = index % FLOWER_TEXTURES.length;
+  return FLOWER_TEXTURES[flowerIndex];
 }
 
 // --- COMPONENTS ---
@@ -71,7 +113,6 @@ function Piedra({ position, index }: { position: [number, number, number], index
   const texturePath = useMemo(() => getRandomStoneTexture(index), [index]);
   const texture = useLoader(THREE.TextureLoader, texturePath);
   
-  // Configure texture for proper isometric appearance
   useMemo(() => {
     if (texture) {
       texture.wrapS = THREE.RepeatWrapping;
@@ -84,7 +125,6 @@ function Piedra({ position, index }: { position: [number, number, number], index
 
   return (
     <mesh position={position} receiveShadow castShadow rotation={[-Math.PI / 2, 0, 0]}>
-      {/* Plane geometry to show the isometric stone image */}
       <planeGeometry args={[1.8, 1.8]} />
       <meshStandardMaterial 
         map={texture} 
@@ -95,18 +135,47 @@ function Piedra({ position, index }: { position: [number, number, number], index
   );
 }
 
+// New component for the actual flower image
+function FlowerImage({ texturePath, hovered }: { texturePath: string, hovered: boolean }) {
+  const texture = useLoader(THREE.TextureLoader, texturePath);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const { camera } = useThree();
+
+  useFrame(() => {
+    // Make the flower always face the camera (billboard effect)
+    if (meshRef.current) {
+      meshRef.current.lookAt(camera.position);
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} position={[0, 1.2, 0]} rotation={[0, Math.PI, 0]} castShadow>
+      <planeGeometry args={[1, 1.5]} /> {/* Adjust size as needed */}
+      <meshStandardMaterial 
+        map={texture} 
+        transparent={true} 
+        alphaTest={0.5} // Helps with transparent backgrounds of flower images
+        emissive={hovered ? new THREE.Color("#ff69b4") : new THREE.Color("#000000")}
+        emissiveIntensity={hovered ? 0.7 : 0}
+      />
+    </mesh>
+  );
+}
+
 function Flower({ 
   position, 
   data, 
-  onSelect 
+  onSelect,
+  flowerIndex
 }: { 
   position: [number, number, number], 
   data: { term: string, def: string },
-  onSelect: (data: any) => void
+  onSelect: (data: any) => void,
+  flowerIndex: number // Pass the index to get the correct flower image
 }) {
   const [hovered, setHover] = useState(false);
-  
-  // Change cursor on hover
+  const texturePath = useMemo(() => getFlowerTexturePath(flowerIndex), [flowerIndex]);
+
   useEffect(() => {
     document.body.style.cursor = hovered ? 'pointer' : 'auto';
     return () => { document.body.style.cursor = 'auto'; };
@@ -125,18 +194,8 @@ function Flower({
         <meshStandardMaterial color="green" />
       </mesh>
       
-      {/* Flower Head */}
-      <mesh position={[0, 1.1, 0]}>
-        <dodecahedronGeometry args={[0.4, 0]} />
-        <meshStandardMaterial 
-          color={hovered ? "#ff69b4" : "#ff1493"} 
-          emissive={hovered ? "#ff69b4" : "#000000"}
-          emissiveIntensity={0.5}
-        />
-      </mesh>
-
-      {/* Label (Optional: visible when close?) */}
-      {/* You could add Text from @react-three/drei here if needed */}
+      {/* Flower Head - now uses the image component */}
+      <FlowerImage texturePath={texturePath} hovered={hovered} />
     </group>
   );
 }
@@ -150,7 +209,6 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      // Positive adds to Z, moving the world towards the camera
       velocity.current += e.deltaY * 0.01;
     };
 
@@ -162,12 +220,11 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
     positionZ.current += velocity.current;
     velocity.current *= 0.85;
 
-    // Clamp limits
     if (positionZ.current < MIN_Z) {
       positionZ.current = MIN_Z;
       velocity.current = 0;
     }
-    if (positionZ.current > MAX_Z + 10) { // Allow scrolling a bit past the end
+    if (positionZ.current > MAX_Z + 10) {
       positionZ.current = MAX_Z + 10;
       velocity.current = 0;
     }
@@ -176,18 +233,15 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
       group.current.position.z = positionZ.current;
     }
 
-    // --- Camera Logic ---
     const currentIndex = positionZ.current / DISTANCIA;
     const targetX = getZigZagX(currentIndex);
     
-    // Smooth follow X
     camera.position.x += (targetX - camera.position.x) * 0.1;
     camera.position.y = 4;
-    camera.position.z = 6; // Start position (behind the start line)
+    camera.position.z = 6;
 
-    // Look ahead
     const lookAtX = getZigZagX(currentIndex + 3);
-    camera.lookAt(lookAtX, 0, -10); // Look into the distance
+    camera.lookAt(lookAtX, 0, -10);
   });
 
   return (
@@ -196,28 +250,24 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
         const x = getZigZagX(i);
         const z = -i * DISTANCIA;
         
-        // Determine side for the flower (Left or Right)
-        // We push them 3.5 units away from the center of the path at that point
         const isLeft = i % 2 === 0;
         const flowerOffset = isLeft ? -3.5 : 3.5;
         const flowerX = x + flowerOffset;
 
         return (
           <group key={i}>
-            {/* The Path Stone */}
             <Piedra position={[x, 0.01, z]} index={i} />
             
-            {/* The UX Flower */}
             <Flower 
               position={[flowerX, 0, z]} 
               data={item} 
               onSelect={onSelectTerm}
+              flowerIndex={i} // Pass current index for flower texture
             />
           </group>
         );
       })}
       
-      {/* Ground moved inside Camino group so it scrolls with everything */}
       <Ground />
     </group>
   );
@@ -226,12 +276,11 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
 function Ground() {
   const groundTexture = useLoader(THREE.TextureLoader, `${process.env.NEXT_PUBLIC_BASE_PATH}/tile.webp`);
   
-  // Configure texture for tiling - use useMemo to prevent re-configuration
   useMemo(() => {
     if (groundTexture) {
       groundTexture.wrapS = THREE.RepeatWrapping;
       groundTexture.wrapT = THREE.RepeatWrapping;
-      groundTexture.repeat.set(GROUND_TILE_SIZE, GROUND_TILE_SIZE * 2); // x2 for the longer dimension
+      groundTexture.repeat.set(GROUND_TILE_SIZE, GROUND_TILE_SIZE * 2);
       groundTexture.needsUpdate = true;
     }
     return groundTexture;
@@ -253,7 +302,6 @@ export default function Camino3D() {
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
       
-      {/* 3D Scene */}
       <Canvas
         shadows
         camera={{ position: [0, 5, 6], fov: 60 }}
@@ -273,7 +321,6 @@ export default function Camino3D() {
         </Suspense>
       </Canvas>
 
-      {/* UI Overlay for Definitions */}
       {selectedTerm && (
         <div style={{
           position: "absolute",
@@ -314,7 +361,6 @@ export default function Camino3D() {
         </div>
       )}
 
-      {/* Instructions Overlay */}
       {!selectedTerm && (
         <div style={{
           position: "absolute",
