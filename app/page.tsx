@@ -13,7 +13,7 @@ export default function Home() {
       <div className="pointer-events-none absolute -top-20 left-0 right-0 z-10 flex flex-col items-center fade-in-down">
         <div className="relative">
           <Image
-            src="/marco.webp"
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH}/marco.webp`}
             alt="Marco decorativo"
             width={400}
             height={200}
