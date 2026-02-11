@@ -2,6 +2,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
+import { Text } from "@react-three/drei"; // IMPORTANTE: Necesitas instalar esto
 import { useEffect, useRef, useState, useMemo, Suspense } from "react";
 import * as THREE from "three";
 
@@ -33,19 +34,17 @@ const UX_TERMS = [
   { term: "Calidad UX - ISO", def: "Estándares internacionales de usabilidad y ergonomía." },
   { term: "Product Designer", def: "Diseñador responsable de la experiencia completa del producto." },
   { term: "Miro y entiendo", def: "Fase de observación y empatía en el proceso de diseño." },
-
 ];
 
-const DISTANCIA = 2.5; // Slightly more spacing for flowers
+const DISTANCIA = 2.5;
 const TOTAL_ITEMS = UX_TERMS.length;
 const MIN_Z = 0;
 const MAX_Z = (TOTAL_ITEMS - 1) * DISTANCIA;
 const ZIG_ZAG_AMPLITUDE = 3;
 
-// Ground tile configuration
-const GROUND_TILE_SIZE = 10; // How many times the tile repeats across the ground
+const GROUND_TILE_SIZE = 10;
 
-// Stone texture paths
+// Texture paths (Asegúrate de que estas rutas sean correctas en tu proyecto)
 const STONE_TEXTURES = [
   `${process.env.NEXT_PUBLIC_BASE_PATH}/stone1.webp`,
   `${process.env.NEXT_PUBLIC_BASE_PATH}/stone2.webp`,
@@ -53,7 +52,6 @@ const STONE_TEXTURES = [
   `${process.env.NEXT_PUBLIC_BASE_PATH}/stone4.webp`
 ];
 
-// Flower image paths
 const FLOWER_TEXTURES = [
   `${process.env.NEXT_PUBLIC_BASE_PATH}/anemone.webp`,
   `${process.env.NEXT_PUBLIC_BASE_PATH}/begonia.webp`,
@@ -95,13 +93,11 @@ function getZigZagX(index: number): number {
   return Math.sin(index * 0.5) * ZIG_ZAG_AMPLITUDE;
 }
 
-// Get a random stone texture for each index
 function getRandomStoneTexture(index: number): string {
   const randomIndex = Math.floor(Math.abs(Math.sin(index * 12.9898) * 43758.5453) % STONE_TEXTURES.length);
   return STONE_TEXTURES[randomIndex];
 }
 
-// Get flower texture in a circular repeating manner
 function getFlowerTexturePath(index: number): string {
   const flowerIndex = index % FLOWER_TEXTURES.length;
   return FLOWER_TEXTURES[flowerIndex];
@@ -135,14 +131,64 @@ function Piedra({ position, index }: { position: [number, number, number], index
   );
 }
 
-// New component for the actual flower image
+// Componente para el Label estilo Glass
+function GlassLabel({ text, visible }: { text: string, visible: boolean }) {
+    const groupRef = useRef<THREE.Group>(null);
+    const { camera } = useThree();
+
+    useFrame(() => {
+        if (groupRef.current) {
+            // Billboard: que el texto siempre mire a la cámara
+            groupRef.current.lookAt(camera.position);
+        }
+    });
+
+    return (
+        <group ref={groupRef} position={[0, 2.3, 0]}>
+            {/* Fondo de vidrio */}
+            <mesh position={[0, 0, -0.01]}>
+                {/* Ajustamos el ancho dinámicamente o usamos un fijo generoso */}
+                <planeGeometry args={[3.5, 0.8]} />
+                <meshPhysicalMaterial 
+                    color="#ffffff"
+                    transmission={0.6}  // Transparencia tipo vidrio
+                    opacity={1}
+                    metalness={0.1}
+                    roughness={0.15}    // Un poco borroso (frosted glass)
+                    thickness={0.1}     // Grosor para refracción
+                    transparent={true}
+                    side={THREE.DoubleSide}
+                />
+            </mesh>
+            
+            {/* Borde sutil (opcional) */}
+            <mesh position={[0, 0, -0.015]}>
+                 <planeGeometry args={[3.55, 0.85]} />
+                 <meshBasicMaterial color="white" opacity={0.3} transparent />
+            </mesh>
+
+            {/* Texto */}
+            <Text
+                fontSize={0.25}
+                color="#000000" // Texto negro para contraste
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={3.2}
+                lineHeight={1.2}
+                font="https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff" // Fuente estándar
+            >
+                {text}
+            </Text>
+        </group>
+    );
+}
+
 function FlowerImage({ texturePath, hovered }: { texturePath: string, hovered: boolean }) {
   const texture = useLoader(THREE.TextureLoader, texturePath);
   const meshRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
 
   useFrame(() => {
-    // Make the flower always face the camera (billboard effect)
     if (meshRef.current) {
       meshRef.current.lookAt(camera.position);
     }
@@ -150,11 +196,11 @@ function FlowerImage({ texturePath, hovered }: { texturePath: string, hovered: b
 
   return (
     <mesh ref={meshRef} position={[0, 1.2, 0]} rotation={[0, Math.PI, 0]} castShadow>
-      <planeGeometry args={[1, 1.5]} /> {/* Adjust size as needed */}
+      <planeGeometry args={[1, 1.5]} />
       <meshStandardMaterial 
         map={texture} 
         transparent={true} 
-        alphaTest={0.5} // Helps with transparent backgrounds of flower images
+        alphaTest={0.5} 
         emissive={hovered ? new THREE.Color("#ff69b4") : new THREE.Color("#000000")}
         emissiveIntensity={hovered ? 0.7 : 0}
       />
@@ -171,7 +217,7 @@ function Flower({
   position: [number, number, number], 
   data: { term: string, def: string },
   onSelect: (data: any) => void,
-  flowerIndex: number // Pass the index to get the correct flower image
+  flowerIndex: number 
 }) {
   const [hovered, setHover] = useState(false);
   const texturePath = useMemo(() => getFlowerTexturePath(flowerIndex), [flowerIndex]);
@@ -188,13 +234,16 @@ function Flower({
       onPointerOver={() => setHover(true)}
       onPointerOut={() => setHover(false)}
     >
+      {/* Label de Vidrio (Nuevo) */}
+      <GlassLabel text={data.term} visible={true} />
+
       {/* Stem */}
       <mesh position={[0, 0.5, 0]}>
         <cylinderGeometry args={[0.05, 0.05, 1]} />
         <meshStandardMaterial color="green" />
       </mesh>
       
-      {/* Flower Head - now uses the image component */}
+      {/* Flower Head */}
       <FlowerImage texturePath={texturePath} hovered={hovered} />
     </group>
   );
@@ -205,21 +254,58 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
   const { camera } = useThree();
   const velocity = useRef(0);
   const positionZ = useRef(0);
+  
+  // Refs para control táctil
+  const touchStartY = useRef(0);
+  const isTouching = useRef(false);
 
   useEffect(() => {
+    // 1. Desktop Wheel
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       velocity.current += e.deltaY * 0.01;
     };
 
+    // 2. Mobile Touch Logic
+    const onTouchStart = (e: TouchEvent) => {
+        isTouching.current = true;
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+        if (!isTouching.current) return;
+        const currentY = e.touches[0].clientY;
+        const deltaY = touchStartY.current - currentY; // Invertido: deslizar arriba = avanzar
+        
+        // Multiplicador de sensibilidad para touch (ajustar según gusto)
+        velocity.current += deltaY * 0.03; 
+        
+        touchStartY.current = currentY; // Reset para el siguiente frame del movimiento
+    };
+
+    const onTouchEnd = () => {
+        isTouching.current = false;
+    };
+
+    // Agregar Listeners
     window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
+    window.addEventListener("touchstart", onTouchStart, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+        window.removeEventListener("wheel", onWheel);
+        window.removeEventListener("touchstart", onTouchStart);
+        window.removeEventListener("touchmove", onTouchMove);
+        window.removeEventListener("touchend", onTouchEnd);
+    };
   }, []);
 
   useFrame(() => {
     positionZ.current += velocity.current;
-    velocity.current *= 0.85;
+    velocity.current *= 0.85; // Fricción
 
+    // Límites
     if (positionZ.current < MIN_Z) {
       positionZ.current = MIN_Z;
       velocity.current = 0;
@@ -236,6 +322,7 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
     const currentIndex = positionZ.current / DISTANCIA;
     const targetX = getZigZagX(currentIndex);
     
+    // Movimiento de cámara suave
     camera.position.x += (targetX - camera.position.x) * 0.1;
     camera.position.y = 4;
     camera.position.z = 6;
@@ -262,7 +349,7 @@ function Camino({ onSelectTerm }: { onSelectTerm: (t: any) => void }) {
               position={[flowerX, 0, z]} 
               data={item} 
               onSelect={onSelectTerm}
-              flowerIndex={i} // Pass current index for flower texture
+              flowerIndex={i} 
             />
           </group>
         );
@@ -300,7 +387,7 @@ export default function Camino3D() {
   const [selectedTerm, setSelectedTerm] = useState<{ term: string, def: string } | null>(null);
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+    <div style={{ width: "100vw", height: "100vh", position: "relative", touchAction: 'none' }}> {/* touchAction none es importante para evitar scroll nativo del navegador */}
       
       <Canvas
         shadows
@@ -370,9 +457,10 @@ export default function Camino3D() {
           color: "white",
           textShadow: "0 2px 4px rgba(0,0,0,0.5)",
           pointerEvents: "none",
-          textAlign: "center"
+          textAlign: "center",
+          width: "100%"
         }}>
-          <p>Scroll para caminar • Click en las flores para ver definiciones</p>
+          <p>Desliza para caminar • Toca las flores</p>
         </div>
       )}
     </div>
