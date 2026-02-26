@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, 
   },
-  basePath: `/ux_glosary`, // Cambia por tu repo
-  assetPrefix: `/ux_glosary/`,
+ // basePath: `/ux_glosary`, // Cambia por tu repo
+  //assetPrefix: `/ux_glosary/`,
 };
 export default nextConfig;

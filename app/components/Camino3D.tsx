@@ -40,7 +40,13 @@ const UX_TERMS = [
   { term: "Miro y entiendo", def: "Que el usuario mire la interfaz y entienda que es y para que sirve" },
   { term: "Dual track", def: "Es un flujo continuo donde se realiza el trabajo de discovery y delivery por todo el equipo multidisciplinario." },
   { term: "Tips para identificar y comprender los objetivos que los usuarios buscan alcanzar", def: "Buena pregunta..." },
-
+{ term: "Retrospectiva / Retro", def: "Ceremonia ágil que se realiza al final de una iteración o sprint. Su objetivo es que el equipo evalúe qué salió bien, qué falló y defina acciones concretas (action items) para mejorar sus procesos en el futuro." },
+  { term: "Scrum Master", def: "Rol dentro de metodologías ágiles encargado de facilitar el proceso, remover impedimentos, guiar las ceremonias y asegurar que el equipo trabaje de manera fluida y alineada a los principios ágiles." },
+  { term: "Kickoff", def: "Reunión de lanzamiento o inicio de un proyecto (o fase) donde se alinean expectativas, se presentan los objetivos, el contexto y la hoja de ruta a todo el equipo y stakeholders involucrados." },
+  { term: "Planning (Planificación del Sprint)", def: "Ceremonia ágil en la que el equipo se reúne para definir los objetivos del próximo ciclo de trabajo (sprint) y seleccionar las tareas del backlog en las que se enfocarán." },
+  { term: "Daily (Reunión diaria)", def: "Reunión de sincronización diaria, breve (típicamente 15 minutos), donde el equipo comparte en qué trabajó ayer, en qué trabajará hoy y si existe algún impedimento que bloquee su progreso." },
+  { term: "Grooming / Refinamiento del Backlog", def: "Sesión de trabajo en la que el equipo revisa, aclara, detalla y estima las tareas pendientes en el backlog para asegurar que estén listas para ser desarrolladas antes de entrar a un sprint." },
+  { term: "Tres amigos (Three Amigos)", def: "Reunión de alineación colaborativa en la que participan típicamente representantes de Producto/Negocio, Desarrollo y QA (y/o Diseño) para asegurar un entendimiento común de los requerimientos y criterios de aceptación antes de iniciar una tarea." }
 ];
 
 const DISTANCIA = 2.5;
